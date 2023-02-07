@@ -99,6 +99,7 @@ namespace Vue
 			var app = builder.Build();
 
 			//app.UseMiddleware<CheckTokenMiddleware>();
+			app.UseDeveloperExceptionPage();
 			// Configure the HTTP request pipeline.
 			app.UseStaticFiles();
 			if (!app.Environment.IsDevelopment())
