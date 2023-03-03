@@ -7,11 +7,24 @@ const router = createRouter({
   routes: [
     {
       path: "/",
+      // redirect: "/materials/import",
       component: () => import("../views/HomeView.vue"),
       meta: {
         layout: adminLayout,
         transition: "fade",
         title: "Home Page - App",
+      },
+    },
+    {
+      path: "/history",
+      // route level code-splitting
+      // this generates a separate chunk (About.[hash].js) for this route
+      // which is lazy-loaded when the route is visited.
+      component: () => import("../views/history/index.vue"),
+      meta: {
+        layout: adminLayout,
+        transition: "fade",
+        title: "Audittrails",
       },
     },
     {
@@ -49,6 +62,7 @@ const router = createRouter({
         },
       ],
     },
+    
     {
       path: "/member",
       meta: {

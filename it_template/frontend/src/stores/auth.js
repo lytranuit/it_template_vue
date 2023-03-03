@@ -19,9 +19,12 @@ export const useAuth = defineStore("auth", () => {
     const cacheUser = localStorage.getItem("me") || "{}";
     return JSON.parse(cacheUser);
   });
-  const getRoles = computed(() => {
-    return roles.value;
+  const is_admin = computed(() => {
+    return in_groups(["Administrator"]);
   });
+  // const getRoles = computed(() => {
+  //   return roles.value;
+  // });
 
   async function getUser() {
     const { cookies } = useCookies();
@@ -43,7 +46,10 @@ export const useAuth = defineStore("auth", () => {
   }
   async function logout() {
     localStorage.removeItem("me");
-    document.getElementById("logoutForm").submit();
+    // document.getElementById("logoutForm").submit();
+    axiosinstance.post("/V1/Auth/Logout").then((res) => {
+      location.href = "/Identity/Account/Login";
+    });
   }
   async function fetchRoles() {
     if (roles.value.length) return;
@@ -74,13 +80,26 @@ export const useAuth = defineStore("auth", () => {
         return response;
       });
   }
+  function in_groups(groups) {
+    let re = false;
+    let user_roles = user.value.roles;
+    if (user_roles) {
+      for (let d of user_roles) {
+        if (groups.indexOf(d) != -1) {
+          re = true;
+          break;
+        }
+      }
+    }
+    return re;
+  }
   return {
     data,
     roles,
     departments,
-    getRoles,
     isAuth,
     user,
+    is_admin,
     getUser,
     logout,
     fetchRoles,

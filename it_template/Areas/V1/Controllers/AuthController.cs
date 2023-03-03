@@ -1,35 +1,20 @@
 ﻿
 using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
 using Vue.Models;
 using Vue.Data;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
-using System.Security;
-using CertificateManager;
-using CertificateManager.Models;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Vue.Services;
-using Spire.Xls;
-using System.Collections;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Authorization;
-using System.Text;
-using System.Drawing;
-using Fernandezja.ColorHashSharp;
-using iText.Commons.Actions.Contexts;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Authorization;
 
 namespace it_template.Areas.V1.Controllers
 {
 
-	//[Authorize]
-	public class AuthController : BaseController
+	[Area("V1")]
+	[Authorize]
+	public class AuthController : Controller
 	{
+		private readonly AuthContext _context;
 		private readonly UserManager<UserModel> UserManager;
 		private readonly LoginMailPyme _LoginMailPyme;
 
@@ -37,13 +22,14 @@ namespace it_template.Areas.V1.Controllers
 		private readonly IConfiguration _configuration;
 		private readonly SignInManager<UserModel> _signInManager;
 
-		public AuthController(AuthContext context, UserManager<UserModel> UserMgr, ViewRender view, LoginMailPyme LoginMailPyme, SignInManager<UserModel> signInManager, IConfiguration configuration) : base(context)
+		public AuthController(AuthContext context, UserManager<UserModel> UserMgr, ViewRender view, LoginMailPyme LoginMailPyme, SignInManager<UserModel> signInManager, IConfiguration configuration)
 		{
 			_view = view;
 			UserManager = UserMgr;
 			_LoginMailPyme = LoginMailPyme;
 			_configuration = configuration;
 			_signInManager = signInManager;
+			_context = context;
 		}
 		public class InputModel
 		{

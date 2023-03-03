@@ -3,9 +3,16 @@ import { createPinia } from "pinia";
 
 import App from "./App.vue";
 import router from "./router";
+import PrimeVue from "primevue/config";
+import ToastService from 'primevue/toastservice';
+
+// import "primevue/resources/themes/bootstrap4-light-blue/theme.css"; //theme
+import "@/assets/styles.scss";
 
 const app = createApp(App);
 
+app.use(ToastService);
+app.use(PrimeVue);
 app.use(createPinia());
 app.use(router);
 app.mount("#app");
@@ -23,4 +30,3 @@ import "../src/assets/lib/elfinder/js/elfinder.min.js";
 import "../src/assets/lib/elfinder/js/jquery.image_v2.js";
 import "../src/assets/lib/jquery-validation/dist/jquery.validate.js";
 import "../src/assets/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.js";
-

@@ -23,7 +23,7 @@ namespace Vue.Controllers
 
 		public JsonResult Index()
 		{
-			return Json("1");
+			return Json(new { test = 1, message = DateTime.Now });
 
 		}
 

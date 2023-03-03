@@ -1,6 +1,5 @@
 
 <template>
-
   <div class="left-sidenav">
     <ul class="metismenu left-sidenav-menu">
       <li>
@@ -9,7 +8,17 @@
           <span>Tổng quan</span>
         </router-link>
       </li>
-      <li>
+
+      
+      <li v-if="is_admin">
+        <router-link class="nav-link" to="/history">
+          <i class="fas fa-history"></i>
+          <span>Audittrails</span>
+        </router-link>
+      </li>
+
+      <li v-if="is_admin">
+
         <a href="javascript: void(0);">
           <i class="ti-briefcase"></i>
           <span>Hệ thống</span>
@@ -26,10 +35,10 @@
   </div>
 </template>
 <script setup>
-import { onMounted } from 'vue'
-onMounted(() => {
-  $(".metismenu").metisMenu();
-  // initMetisMenu();
-  // initActiveMenu();
-})
+
+import { useAuth } from '../stores/auth';
+const store = useAuth();
+const is_admin = store.is_admin;
+// console.log(in_groups);
+// import { onMounted } from 'vue'
 </script>

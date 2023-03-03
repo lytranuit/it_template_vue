@@ -28,23 +28,9 @@
                                 <div class="form-group row">
                                     <b class="col-12 col-lg-2 col-form-label">Họ và tên:<i class="text-danger">*</i></b>
                                     <div class="col-12 col-lg-4 pt-1">
-                                        <input class="form-control form-control-sm" type="text" name="fullName"
-                                            required="" placeholder="FullName" v-model="data.fullName" />
+                                        <input class="form-control form-control-sm" type="text" name="fullName" required=""
+                                            placeholder="FullName" v-model="data.fullName" />
                                     </div>
-                                    <b class="col-12 col-lg-2 col-form-label">Bộ phận:</b>
-                                    <div class="col-lg-4 pt-1">
-                                        <treeselect :options="departments" multiple
-                                            value-consists-of="ALL_WITH_INDETERMINATE" v-model="data.departments">
-                                        </treeselect>
-                                        <select name="departments[]" v-model="data.departments" multiple class="d-none">
-                                            <option v-for="option in data.departments" :key="option" :value="option">
-                                            </option>
-                                        </select>
-                                    </div>
-                                </div>
-
-
-                                <div class="form-group row">
                                     <b class="col-12 col-lg-2 col-form-label">Nhóm:</b>
                                     <div class="col-lg-4 pt-1">
                                         <treeselect :options="roles" multiple v-model="data.roles"></treeselect>
@@ -93,8 +79,8 @@
                                     </div>
                                     <div class="form-floating mt-2">
                                         <input type="password" class="form-control" name="ConfirmPassword" minlength="6"
-                                            data-rule-equalTo="#password" required=""
-                                            placeholder="Nhập lại mật khẩu mới" autocomplete="off">
+                                            data-rule-equalTo="#password" required="" placeholder="Nhập lại mật khẩu mới"
+                                            autocomplete="off">
                                     </div>
                                 </div>
                             </div>
@@ -136,7 +122,7 @@ const messageSuccess = ref();
 const { axiosinstance } = useAxios();
 const store = useAuth();
 const { roles, departments, data } = storeToRefs(store)
-const dataRoles = ref([]);
+// const dataRoles = ref([]);
 onMounted(() => {
     store.fetchRoles();
     store.fetchDepartment();
@@ -149,7 +135,6 @@ onMounted(() => {
         }
 
     })
-
 })
 
 const submit = () => {

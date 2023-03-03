@@ -1,90 +1,79 @@
-﻿
 <script setup>
-import { ref } from '@vue/reactivity';
+import { computed, watch, ref } from 'vue';
 import LeftSide from '../components/LeftSide.vue'
-import { useAuth } from '../stores/auth'
-const is_hide = ref(false);
+import Topbar from '../components/Topbar.vue'
+import { useLayout } from '@/layouts/composables/layout';
+
+import { useAuth } from '../stores/auth';
 const store = useAuth();
 const response = await store.getUser();
 if (response.success == false) {
-	store.logout();
+    store.logout();
 }
-const user = store.user;
-// console.log(store.user);
-// console.log(user);
+const { layoutConfig, layoutState, isSidebarActive } = useLayout();
+
+const outsideClickListener = ref(null);
+
+watch(isSidebarActive, (newVal) => {
+    if (newVal) {
+        bindOutsideClickListener();
+    } else {
+        unbindOutsideClickListener();
+    }
+});
+
+const containerClass = computed(() => {
+    return {
+        'layout-theme-light': layoutConfig.darkTheme.value === 'light',
+        'layout-theme-dark': layoutConfig.darkTheme.value === 'dark',
+        'layout-overlay': layoutConfig.menuMode.value === 'overlay',
+        'layout-static': layoutConfig.menuMode.value === 'static',
+        'layout-static-inactive': layoutState.staticMenuDesktopInactive.value && layoutConfig.menuMode.value === 'static',
+        'layout-overlay-active': layoutState.overlayMenuActive.value,
+        'layout-mobile-active': layoutState.staticMenuMobileActive.value,
+        'p-input-filled': layoutConfig.inputStyle.value === 'filled',
+        'p-ripple-disabled': !layoutConfig.ripple.value
+    };
+});
+const bindOutsideClickListener = () => {
+    if (!outsideClickListener.value) {
+        outsideClickListener.value = (event) => {
+            if (isOutsideClicked(event)) {
+                layoutState.overlayMenuActive.value = false;
+                layoutState.staticMenuMobileActive.value = false;
+                layoutState.menuHoverActive.value = false;
+            }
+        };
+        document.addEventListener('click', outsideClickListener.value);
+    }
+};
+const unbindOutsideClickListener = () => {
+    if (outsideClickListener.value) {
+        document.removeEventListener('click', outsideClickListener);
+        outsideClickListener.value = null;
+    }
+};
+const isOutsideClicked = (event) => {
+    const sidebarEl = document.querySelector('.layout-sidebar');
+    const topbarEl = document.querySelector('.layout-menu-button');
+
+    return !(sidebarEl.isSameNode(event.target) || sidebarEl.contains(event.target) || topbarEl.isSameNode(event.target) || topbarEl.contains(event.target));
+};
 </script>
 
 <template>
-	<div :class="{ 'enlarge-menu': is_hide == true }">
-		<!-- Top Bar Start -->
-		<div class="topbar">
-
-			<!-- LOGO -->
-			<div class="topbar-left">
-				<router-link to="/" class="logo">
-					<span>
-						<img src="../assets/images/favicon.png" alt="logo-small" class="logo-sm">
-					</span>
-					<span>
-						<img src="../assets/images/PMP_Stada_Group.png" alt="logo-large" class="logo-lg logo-light">
-					</span>
-				</router-link>
-			</div>
-			<!--end logo-->
-			<!-- Navbar -->
-			<nav class="navbar-custom">
-				<ul class="list-unstyled topbar-nav float-right mb-0">
-					<li class="dropdown">
-						<a class="nav-link dropdown-toggle waves-effect waves-light nav-user" data-toggle="dropdown"
-							href="#" role="button" aria-haspopup="false" aria-expanded="false">
-							<img :src="user.image_url" alt="profile-user" class="rounded-circle" />
-							<span class="ml-1 nav-user-name hidden-sm">{{ user.fullName }} <i
-									class="mdi mdi-chevron-down"></i> </span>
-						</a>
-						<div class="dropdown-menu dropdown-menu-right">
-							<router-link to="/member" class="dropdown-item">
-								<i class="dripicons-user text-muted mr-2"></i>Thông tin tài khoản
-							</router-link>
-							<router-link to="/member/changepassword" class="dropdown-item" href="">
-								<i class="dripicons-anchor text-muted mr-2"></i> Đổi mật khẩu
-							</router-link>
-
-							<div class="dropdown-divider"></div>
-							<form id="logoutForm" class="form-inline" action="/V1/Auth/Logout" method="post">
-								<a class="dropdown-item" style="cursor:pointer;" @click="store.logout()"><i
-										class="dripicons-exit text-muted mr-2"></i> Đăng xuất</a>
-							</form>
-						</div>
-					</li>
-				</ul><!--end topbar-nav-->
-
-				<ul class="list-unstyled topbar-nav mb-0">
-					<li>
-						<button class="button-menu-mobile nav-link waves-effect waves-light"
-							@click="is_hide = !is_hide">
-							<i class="dripicons-menu nav-icon"></i>
-						</button>
-					</li>
-				</ul>
-			</nav>
-			<!-- end navbar-->
-		</div>
-		<!-- Top Bar End -->
-
-		<div class="page-wrapper">
-			<!-- Left Sidenav -->
-			<LeftSide />
-			<!-- end left-sidenav-->
-			<!-- Page Content-->
-			<div class="page-content">
-
-				<div class="container-fluid">
-					<router-view />
-				</div><!-- container -->
-
-			</div>
-			<!-- end page content -->
-		</div>
-		<!-- end page-wrapper -->
-	</div>
+    <div class="layout-wrapper" :class="containerClass">
+        <Topbar></Topbar>
+        <div class="layout-sidebar">
+            <LeftSide></LeftSide>
+        </div>
+        <div class="layout-main-container">
+            <div class="layout-main">
+                <router-view></router-view>
+            </div>
+        </div>
+        <div class="layout-mask"></div>
+    </div>
 </template>
+
+<style lang="scss" scoped></style>

@@ -36,23 +36,9 @@
                                 <div class="form-group row">
                                     <b class="col-12 col-lg-2 col-form-label">Họ và tên:<i class="text-danger">*</i></b>
                                     <div class="col-12 col-lg-4 pt-1">
-                                        <input class="form-control form-control-sm" type="text" name="fullName"
-                                            required="" placeholder="FullName" v-model="data.fullName" />
+                                        <input class="form-control form-control-sm" type="text" name="fullName" required=""
+                                            placeholder="FullName" v-model="data.fullName" />
                                     </div>
-                                    <b class="col-12 col-lg-2 col-form-label">Bộ phận:</b>
-                                    <div class="col-lg-4 pt-1">
-                                        <treeselect :options="departments" multiple
-                                            value-consists-of="ALL_WITH_INDETERMINATE" v-model="data.departments">
-                                        </treeselect>
-                                        <select name="departments[]" v-model="data.departments" multiple class="d-none">
-                                            <option v-for="option in data.departments" :key="option" :value="option">
-                                            </option>
-                                        </select>
-                                    </div>
-                                </div>
-
-
-                                <div class="form-group row">
                                     <b class="col-12 col-lg-2 col-form-label">Nhóm:</b>
                                     <div class="col-lg-4 pt-1">
                                         <treeselect :options="roles" multiple v-model="data.groups"></treeselect>
@@ -62,6 +48,7 @@
                                         </select>
                                     </div>
                                 </div>
+
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group row">
@@ -100,6 +87,7 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router';
 const router = useRouter();
 const messageError = ref();
+const messageSuccess = ref();
 const { axiosinstance } = useAxios();
 const store = useAuth();
 const { roles, departments } = storeToRefs(store)

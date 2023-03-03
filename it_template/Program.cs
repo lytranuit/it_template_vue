@@ -41,6 +41,7 @@ namespace Vue
 				.AddEntityFrameworkStores<IdentityContext>(); ;
 			builder.Services.AddControllersWithViews().AddJsonOptions(x =>
 			   x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
+
 			builder.Services.AddDbContext<AuthContext>(options =>
 			  options.UseSqlServer(connectionString)
 			  );
@@ -145,13 +146,32 @@ namespace Vue
 			////Xác thực đăng nhập khi dùng SPA
 			app.Use(async (context, next) =>
 			{
-				if (!context.User.Identity.IsAuthenticated)
+				var path = (string)context.Request.Path;
+				var is_except = false;
+				var except = new List<string>()
+				{
+					"/v1/auth",
+					"/Identity/Account/AccessDenied",
+				};
+				foreach (var item in except)
+				{
+					if (path.ToLower().StartsWith(item.ToLower()))
+					{
+						is_except = true;
+						break;
+					}
+				}
+				if (is_except || context.User.Identity.IsAuthenticated)
+				{
+					await next();
+				}
+				else if (!context.User.Identity.IsAuthenticated)
 				{
 					context.Response.Redirect("/Identity/Account/Login");
 				}
 				else
 				{
-					await next();
+					context.Response.Redirect("/Identity/Account/AccessDenied");
 				}
 			});
 			app.UseSpa(spa =>
