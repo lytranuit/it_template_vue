@@ -35,8 +35,8 @@
             </div>
             <div class="card-footer">
                 <div class="d-inline-block w-100 text-center">
-                    <button type="submit" class="btn btn-sm btn-primary" style="width:200px"
-                        @click.prevent="submit()">Cập nhật mật khẩu</button>
+                    <button type="submit" class="btn btn-sm btn-primary" style="width:200px" @click.prevent="submit()">Cập
+                        nhật mật khẩu</button>
                 </div>
             </div>
         </section>
@@ -47,8 +47,7 @@ import { onMounted } from 'vue';
 import { ref } from '@vue/reactivity';
 import AlertSuccess from '../../components/AlertSuccess.vue';
 import AlertError from '../../components/AlertError.vue';
-import { useAxios } from "../../service/axios";
-const { axiosinstance } = useAxios();
+import userApi from '../../api/userApi';
 const messageSuccess = ref();
 const messageError = ref();
 const confirm = ref('');
@@ -80,9 +79,7 @@ const submit = () => {
     formData.append('oldpassword', password.value)
     formData.append('newpassword', new_password.value)
     formData.append('confirm', confirm.value)
-    axiosinstance.post("/v1/auth/ChangePassword", formData).then((response) => {
-        return response.data
-    }).then((response) => {
+    userApi.changepassword(formData).then((response) => {
         messageSuccess.value = '';
         messageError.value = '';
         if (response.success) {
