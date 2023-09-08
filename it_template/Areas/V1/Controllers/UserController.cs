@@ -15,326 +15,467 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using System.Xml.Linq;
 using System.Data;
+using NuGet.Packaging;
+using Spire.Xls;
 
 namespace it_template.Areas.V1.Controllers
 {
 
-	[Authorize(Roles = "Administrator")]
-	public class UserController : BaseController
-	{
-		private UserManager<UserModel> UserManager;
-		private RoleManager<IdentityRole> RoleManager;
-		private readonly IConfiguration _configuration;
-		public UserController(AuthContext context, UserManager<UserModel> UserMgr, RoleManager<IdentityRole> RoleMgr, IConfiguration configuration) : base(context)
-		{
-			_configuration = configuration;
-			UserManager = UserMgr;
-			RoleManager = RoleMgr;
-		}
+    [Authorize(Roles = "Administrator")]
+    public class UserController : BaseController
+    {
+        private UserManager<UserModel> UserManager;
+        private RoleManager<IdentityRole> RoleManager;
+        private readonly IConfiguration _configuration;
+        private EsignContext _esignContext;
+        public UserController(ItContext context, EsignContext EsignContext, UserManager<UserModel> UserMgr, RoleManager<IdentityRole> RoleMgr, IConfiguration configuration) : base(context)
+        {
+            _esignContext = EsignContext;
+            _configuration = configuration;
+            UserManager = UserMgr;
+            RoleManager = RoleMgr;
+        }
 
-		// POST: UserController/Create
-		[HttpPost]
-		public async Task<JsonResult> Create(UserModel User, string password, List<string> roles)
-		{
+        // POST: UserController/Create
+        [HttpPost]
+        public async Task<JsonResult> Create(UserModel User, string password, List<string> roles, List<int> departments)
 
-			System.Security.Claims.ClaimsPrincipal currentUser = this.User;
-			var user_current = await UserManager.GetUserAsync(currentUser); // Get user id:
-																			//string password = "!PMP_it123456";
-			UserModel user = new UserModel
-			{
-				Email = User.Email,
-				UserName = User.Email,
-				EmailConfirmed = true,
-				FullName = User.FullName,
-				image_url = User.image_url,
-				departments = User.departments,
-				expiry_date = DateTime.Now + TimeSpan.FromDays(180)
-			};
-			IdentityResult result = await UserManager.CreateAsync(user, password);
-			if (result.Succeeded)
-			{
-				//return Ok(result);
-				foreach (string group in roles)
-				{
-					await UserManager.AddToRoleAsync(user, group);
-				}
-				// Generate private-public key pair
-				//var serviceProvider = new ServiceCollection()
-				//	  .AddCertificateManager()
-				//	  .BuildServiceProvider();
+        {
 
-				//string passwordPublic = "!PMP_it123456";
-				//var createClientServerAuthCerts = serviceProvider.GetService<CreateCertificatesClientServerAuth>();
+            System.Security.Claims.ClaimsPrincipal currentUser = this.User;
+            var user_current = await UserManager.GetUserAsync(currentUser); // Get user id:
+                                                                            //string password = "!PMP_it123456";
+            UserModel user = new UserModel
+            {
+                Email = User.Email,
+                UserName = User.Email,
+                EmailConfirmed = true,
+                FullName = User.FullName,
+                image_url = User.image_url,
+                image_sign = User.image_sign,
+            };
+            IdentityResult result = await UserManager.CreateAsync(user, password);
+            if (result.Succeeded)
+            {
+                //return Ok(result);
+                foreach (string role_id in roles)
+                {
+                    _context.Add(new UserRoleModel()
+                    {
+                        UserId = user.Id,
+                        RoleId = role_id,
+                    });
+                }
+                foreach (int department in departments)
+                {
+                    var UserDepartmentModel = new UserDepartmentModel()
+                    {
+                        user_id = user.Id,
+                        department_id = department,
+                    };
+                    _context.Add(UserDepartmentModel);
+                }
+                await _context.SaveChangesAsync();
+                /// Audittrail
+                var audit = new AuditTrailsModel();
+                audit.UserId = user_current.Id;
+                audit.Type = AuditType.Create.ToString();
+                audit.DateTime = DateTime.Now;
+                audit.description = $"Tài khoản {user_current.FullName} đã tạo tài khoản mới.";
+                audit.TableName = "UserModel";
+                audit.PrimaryKey = user.Id;
+                audit.NewValues = JsonConvert.SerializeObject(user);
 
-				//X509Certificate2 rootCaL1 = new X509Certificate2("private/rootca/localhost_root.pfx", passwordPublic);
-				//var serverL3 = createClientServerAuthCerts.NewClientChainedCertificate(
-				//	new DistinguishedName { CommonName = user.FullName + "<" + user.Email + ">", OrganisationUnit = user.position },
-				//	new ValidityPeriod { ValidFrom = DateTime.UtcNow, ValidTo = DateTime.UtcNow.AddYears(10) },
-				//	"localhost", rootCaL1);
-				//var importExportCertificate = serviceProvider.GetService<ImportExportCertificate>();
-				//var serverCertL3InPfxBtyes = importExportCertificate.ExportChainedCertificatePfx(passwordPublic, serverL3, rootCaL1);
-				//System.IO.File.WriteAllBytes("private/pfx/" + user.Id + ".pfx", serverCertL3InPfxBtyes);
+                _context.Add(audit);
+                await _context.SaveChangesAsync();
 
-				/// Audittrail
+                return Json(new { success = true, message = "Tạo thành công" });
+            }
+            else
+            {   /// Audittrail
 				var audit = new AuditTrailsModel();
-				audit.UserId = user_current.Id;
-				audit.Type = AuditType.Create.ToString();
-				audit.DateTime = DateTime.Now;
-				audit.description = $"Tài khoản {user.FullName} đã tạo tài khoản mới.";
-				audit.TableName = "UserModel";
-				audit.PrimaryKey = user.Id;
-				audit.NewValues = JsonConvert.SerializeObject(user);
+                audit.UserId = user_current.Id;
+                audit.Type = AuditType.None.ToString();
+                audit.DateTime = DateTime.Now;
+                audit.description = result.ToString();
+                audit.TableName = "UserModel";
 
-				_context.Add(audit);
-				await _context.SaveChangesAsync();
+                _context.Add(audit);
+                await _context.SaveChangesAsync();
+                return Json(new { success = false, message = result.ToString() });
+            }
 
-				return Json(new { success = true, message = "Tạo thành công" });
-			}
-			else
-				return Json(new { success = false, message = "Email đã tồn tài!" });
-
-		}
+        }
 
 
-		// POST: UserController/Edit/5
-		[HttpPost]
-		public async Task<JsonResult> Edit(UserModel User, List<string> roles)
-		{
-			UserModel User_old = await UserManager.FindByIdAsync(User.Id);
-			var OldValues = JsonConvert.SerializeObject(User_old);
-			User_old.Email = User.Email;
-			User_old.UserName = User.Email;
-			User_old.FullName = User.FullName;
-			User_old.image_url = User.image_url;
-			User_old.departments = User.departments;
+        // POST: UserController/Edit/5
+        [HttpPost]
+        public async Task<JsonResult> Edit(UserModel User, List<string> roles, List<int> departments)
+        {
+            UserModel User_old = await UserManager.FindByIdAsync(User.Id);
+            var OldValues = JsonConvert.SerializeObject(User_old);
+            User_old.Email = User.Email;
+            User_old.UserName = User.Email;
+            User_old.FullName = User.FullName;
+            User_old.image_url = User.image_url;
+            User_old.image_sign = User.image_sign;
+
+            _context.Update(User_old);
+            _context.SaveChanges();
+            var role_avaliable = _configuration.GetSection("Roles").Get<string[]>().ToList();
+            var roles_old = RoleManager.Roles.Where(d => role_avaliable.Contains(d.Name)).Select(a => a.Id).ToList();
+
+            var UserRoleModel_old = _context.UserRoleModel.Where(d => d.UserId == User.Id && roles_old.Contains(d.RoleId)).Select(d => d.RoleId).ToList();
+            IEnumerable<string> list_delete = UserRoleModel_old.Except(roles);
+            IEnumerable<string> list_add = roles.Except(UserRoleModel_old);
+            if (list_add != null)
+            {
+                foreach (string key in list_add)
+                {
+
+                    _context.Add(new UserRoleModel()
+                    {
+                        UserId = User.Id,
+                        RoleId = key,
+                    });
+                }
+                await _context.SaveChangesAsync();
+            }
+            if (list_delete != null)
+            {
+                foreach (string key in list_delete)
+                {
+                    UserRoleModel UserRoleModel = _context.UserRoleModel.Where(d => d.UserId == User.Id && d.RoleId == key).First();
+                    _context.Remove(UserRoleModel);
+                }
+                await _context.SaveChangesAsync();
+            }
+            ///
+            var departments_old = _context.UserDepartmentModel.Where(d => d.user_id == User_old.Id).ToList();
+            _context.RemoveRange(departments_old);
+            foreach (int department in departments)
+            {
+                var UserDepartmentModel = new UserDepartmentModel()
+                {
+                    user_id = User_old.Id,
+                    department_id = department,
+                };
+                _context.Add(UserDepartmentModel);
+            }
+            _context.SaveChanges();
+            return Json(new { success = true, message = "Thành công" });
+
+        }
+
+        // POST: UserController/Edit/5
+        [HttpPost]
+        public async Task<IActionResult> Delete(string id)
+        {
+            UserModel User = await UserManager.FindByIdAsync(id);
+            if (User != null)
+            {
+                //var OldValues = JsonConvert.SerializeObject(User);
+                User.deleted_at = DateTime.Now;
+                IdentityResult result = await UserManager.UpdateAsync(User);
+                if (result.Succeeded)
+                {
+                    /// Audittrail
+                    System.Security.Claims.ClaimsPrincipal currentUser = this.User;
+                    var user = await UserManager.GetUserAsync(currentUser); // Get user
+                    var audit = new AuditTrailsModel();
+                    audit.UserId = user.Id;
+                    audit.Type = AuditType.Delete.ToString();
+                    audit.DateTime = DateTime.Now;
+                    audit.description = $"Tài khoản {user.FullName} đã xóa tài khoản {User.FullName}.";
+                    audit.TableName = "UserModel";
+                    audit.PrimaryKey = User.Id;
+                    _context.Add(audit);
+                    await _context.SaveChangesAsync();
+                }
+            }
+            return Ok();
+        }
+        public async Task<JsonResult> Get(string id)
+        {
+            UserModel User = await _context.UserModel.Where(d => d.Id == id).Include(d => d.departments).FirstOrDefaultAsync();
+            var role_avaliable = _configuration.GetSection("Roles").Get<string[]>().ToList();
+            var roles_old = RoleManager.Roles.Where(d => role_avaliable.Contains(d.Name)).Select(a => a.Id).ToList();
+            var roles = _context.UserRoleModel.Where(d => d.UserId == id && roles_old.Contains(d.RoleId)).Select(d => d.RoleId).ToList();
+            return Json(new { success = true, id = User.Id, roles = roles, departments = User.departments.Select(d => d.department_id.ToString()).ToList(), email = User.Email, FullName = User.FullName, image_url = User.image_url, image_sign = User.image_sign });
+        }
+
+        [HttpPost]
+        public async Task<JsonResult> Table()
+        {
+            var draw = Request.Form["draw"].FirstOrDefault();
+            var start = Request.Form["start"].FirstOrDefault();
+            var length = Request.Form["length"].FirstOrDefault();
+            var searchValue = Request.Form["search[value]"].FirstOrDefault();
+            var id = Request.Form["filters[id]"].FirstOrDefault();
+            var email = Request.Form["filters[email]"].FirstOrDefault();
+            var fullName = Request.Form["filters[fullName]"].FirstOrDefault();
+            int pageSize = length != null ? Convert.ToInt32(length) : 0;
+            int skip = start != null ? Convert.ToInt32(start) : 0;
+            var customerData = (from tempcustomer in UserManager.Users select tempcustomer);
+            customerData = customerData.Where(m => m.deleted_at == null);
+            int recordsTotal = customerData.Count();
+            if (id != null && id != "")
+            {
+                customerData = customerData.Where(d => d.Id == id);
+            }
+            if (email != null && email != "")
+            {
+                customerData = customerData.Where(d => d.Email.Contains(email));
+            }
+            if (fullName != null && fullName != "")
+            {
+                customerData = customerData.Where(d => d.FullName.Contains(fullName));
+            }
+            int recordsFiltered = customerData.Count();
+            var datapost = customerData.Skip(skip).Take(pageSize).ToList();
+            var data = new ArrayList();
+            foreach (var record in datapost)
+            {
+                var image = "<img src='" + record.image_url + "' class='thumb-sm rounded-circle'>";
+                var image_sign = "<img src='" + record.image_sign + "' class='' width='100'>";
+                var data1 = new
+                {
+                    Id = record.Id,
+                    email = record.Email,
+                    fullName = record.FullName,
+                    image = image,
+                    image_sign = image_sign
+                };
+                data.Add(data1);
+            }
+            var jsonData = new { draw = draw, recordsFiltered = recordsFiltered, recordsTotal = recordsTotal, data = data };
+            return Json(jsonData);
+        }
+
+        public class InputModel
+        {
+            /// <summary>
+            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
+            ///     directly from your code. This API may change or be removed in future releases.
+            /// </summary>
+            [Required]
+            public string id { get; set; }
+
+            /// <summary>
+            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
+            ///     directly from your code. This API may change or be removed in future releases.
+            /// </summary>
+            [Required]
+            [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+            [DataType(DataType.Password)]
+            [Display(Name = "New password")]
+            public string? NewPassword { get; set; }
+
+            /// <summary>
+            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
+            ///     directly from your code. This API may change or be removed in future releases.
+            /// </summary>
+            [DataType(DataType.Password)]
+            [Display(Name = "Confirm new password")]
+            [Compare("NewPassword", ErrorMessage = "The new password and confirmation password do not match.")]
+            public string? ConfirmPassword { get; set; }
+        }
+        [HttpPost]
+        public async Task<IActionResult> ChangePassword(InputModel Input)
+        {
+            //Get User By Id
+            var User = await UserManager.FindByIdAsync(Input.id);
+
+            //Generate Token
+            var token = await UserManager.GeneratePasswordResetTokenAsync(User);
+
+            //Set new Password
+            var changePasswordResult = await UserManager.ResetPasswordAsync(User, token, Input.NewPassword);
+
+            if (!changePasswordResult.Succeeded)
+            {
+                var ErrorMessage = "";
+                foreach (var error in changePasswordResult.Errors)
+                {
+                    ErrorMessage += error.Description + "<br>";
+                }
+                return Json(new { success = false, message = ErrorMessage });
+            }
+            User.AccessFailedCount = 0;
+            User.LockoutEnd = null;
+            await UserManager.UpdateAsync(User);
+
+            /// Audittrail
+            System.Security.Claims.ClaimsPrincipal currentUser = this.User;
+            var user = await UserManager.GetUserAsync(currentUser); // Get user
+            var audit = new AuditTrailsModel();
+            audit.UserId = user.Id;
+            audit.Type = AuditType.Update.ToString();
+            audit.DateTime = DateTime.Now;
+            audit.description = $"Tài khoản {user.FullName} đã thay đổi mật khẩu tài khoản {User.FullName}.";
+            _context.Add(audit);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Mật khẩu đã được thay đổi" });
+
+        }
 
 
-			var RolesForThisUser = await UserManager.GetRolesAsync(User_old);
-			await UserManager.RemoveFromRolesAsync(User_old, RolesForThisUser);
-			foreach (string group in roles)
-			{
-				await UserManager.AddToRoleAsync(User_old, group);
-			}
 
-			IdentityResult result = await UserManager.UpdateAsync(User_old);
-			if (result.Succeeded)
-			{
-				/// Audittrail
-				System.Security.Claims.ClaimsPrincipal currentUser = this.User;
-				var user = await UserManager.GetUserAsync(currentUser); // Get user
-				var audit = new AuditTrailsModel();
-				audit.UserId = user.Id;
-				audit.Type = AuditType.Update.ToString();
-				audit.DateTime = DateTime.Now;
-				audit.description = $"Tài khoản {user.FullName} đã chỉnh sửa cho tài khoản {User_old.FullName}.";
-				audit.TableName = "UserModel";
-				audit.PrimaryKey = User_old.Id;
-				audit.NewValues = JsonConvert.SerializeObject(User_old);
-				audit.OldValues = OldValues;
-				_context.Add(audit);
-				await _context.SaveChangesAsync();
+        public async Task<JsonResult> Roles()
+        {
+            var role_avaliable = _configuration.GetSection("Roles").Get<string[]>().ToList();
+            var Model = RoleManager.Roles.Where(d => role_avaliable.Contains(d.Name)).Select(a => new
+            {
+                id = a.Id,
+                label = a.Name
+            }).ToList();
+            //var jsonData = new { data = ProcessModel };
+            return Json(Model);
+        }
+        public async Task<JsonResult> Departments()
+        {
+            var All = GetChild(0);
+            //var jsonData = new { data = ProcessModel };
+            return Json(All);
+        }
+        private List<SelectResponse> GetChild(int parent)
+        {
+            var DepartmentModel = _context.DepartmentModel.Where(d => d.deleted_at == null && d.parent == parent).OrderBy(d => d.stt).ToList();
+            var list = new List<SelectResponse>();
+            if (DepartmentModel.Count() > 0)
+            {
+                foreach (var department in DepartmentModel)
+                {
+                    var DepartmentResponse = new SelectResponse
+                    {
 
-				return Json(new { success = true, message = "Thành công" });
-			}
-			else
-				return Json(new { success = false, message = "Xảy ra lỗi!" });
+                        id = department.id.ToString(),
+                        label = department.name
+                    };
+                    var count_child = _context.DepartmentModel.Where(d => d.deleted_at == null && d.parent == department.id).Count();
+                    if (count_child > 0)
+                    {
+                        var child = GetChild(department.id);
+                        DepartmentResponse.children = child;
+                    }
+                    list.Add(DepartmentResponse);
+                }
+            }
+            return list;
+        }
+        [HttpPost]
+        public async Task<JsonResult> sync()
+        {
+            var user_esign = _esignContext.UserEsignModel.Where(d => d.deleted_at == null && d.image_sign != "/private/images/tick.png").ToList();
 
-		}
+            foreach (var user in user_esign)
+            {
+                var find = _context.UserModel.Where(d => d.Email.ToLower() == user.Email.ToLower()).FirstOrDefault();
+                if (find != null)
+                {
+                    find.FullName = user.FullName;
+                    find.image_sign = user.image_sign;
+                    find.image_url = user.image_url;
+                    find.signature = $"/private/pfx/{user.Id}.pfx";
+                    _context.Update(find);
+                    _context.SaveChanges();
+                }
+                else
+                {
+                    UserModel newuser = new UserModel
+                    {
+                        Email = user.Email,
+                        UserName = user.Email,
+                        EmailConfirmed = true,
+                        FullName = user.FullName,
+                        image_url = user.image_url,
+                        image_sign = user.image_sign,
+                        signature = $"/private/pfx/{user.Id}.pfx"
+                    };
+                    IdentityResult result = await UserManager.CreateAsync(newuser, "!PMP_it123456");
 
-		public async Task<IActionResult> Delete(string id)
-		{
-			UserModel User = await UserManager.FindByIdAsync(id);
-			if (User != null)
-			{
-				var OldValues = JsonConvert.SerializeObject(User);
-				User.deleted_at = DateTime.Now;
-				IdentityResult result = await UserManager.UpdateAsync(User);
-				if (result.Succeeded)
-				{
-					/// Audittrail
-					System.Security.Claims.ClaimsPrincipal currentUser = this.User;
-					var user = await UserManager.GetUserAsync(currentUser); // Get user
-					var audit = new AuditTrailsModel();
-					audit.UserId = user.Id;
-					audit.Type = AuditType.Delete.ToString();
-					audit.DateTime = DateTime.Now;
-					audit.description = $"Tài khoản {user.FullName} đã xóa tài khoản {User.FullName}.";
-					audit.TableName = "UserModel";
-					audit.PrimaryKey = User.Id;
-					audit.NewValues = JsonConvert.SerializeObject(User);
-					audit.OldValues = OldValues;
-					_context.Add(audit);
-					await _context.SaveChangesAsync();
-				}
-			}
-			return Redirect("/user");
-		}
-		public async Task<JsonResult> Get(string id)
-		{
-			UserModel User = await _context.UserModel.Where(d => d.Id == id).FirstOrDefaultAsync();
-			var roles = await UserManager.GetRolesAsync(User);
-			return Json(new { success = true, id = User.Id, departments = User.departments, roles = roles, email = User.Email, FullName = User.FullName, image_url = User.image_url });
-		}
+                }
+            }
+            return Json(new { success = true });
+        }
 
-		[HttpPost]
-		public async Task<JsonResult> Table()
-		{
-			var draw = Request.Form["draw"].FirstOrDefault();
-			var start = Request.Form["start"].FirstOrDefault();
-			var length = Request.Form["length"].FirstOrDefault();
-			var searchValue = Request.Form["search[value]"].FirstOrDefault();
-			int pageSize = length != null ? Convert.ToInt32(length) : 0;
-			int skip = start != null ? Convert.ToInt32(start) : 0;
-			var customerData = (from tempcustomer in UserManager.Users select tempcustomer);
-			customerData = customerData.Where(m => m.deleted_at == null);
-			int recordsTotal = customerData.Count();
-			if (!string.IsNullOrEmpty(searchValue))
-			{
-				customerData = customerData.Where(m => m.UserName.Contains(searchValue) || m.FullName.Contains(searchValue));
-			}
-			int recordsFiltered = customerData.Count();
-			var datapost = customerData.Skip(skip).Take(pageSize).ToList();
-			var data = new ArrayList();
-			foreach (var record in datapost)
-			{
-				var image = "<img src='" + record.image_url + "' class='thumb-sm rounded-circle'>";
-				var sign = "<img src='" + record.image_sign + "' class='' width='100'>";
-				var data1 = new
-				{
-					action = "<div class='btn-group'><a href='/v1/user/delete/" + record.Id + "' class='btn btn-danger btn-sm' title='Xóa?' data-type='confirm'>'"
-						+ "<i class='fas fa-trash-alt'>"
-						+ "</i>"
-						+ "</a></div>",
-					Id = "<a href='/user/edit/" + record.Id + "'><i class='fas fa-pencil-alt mr-2'></i> " + record.Id + "</a>",
-					email = record.Email,
-					name = record.FullName,
-					sign = sign,
-					image = image
-				};
-				data.Add(data1);
-			}
-			var jsonData = new { draw = draw, recordsFiltered = recordsFiltered, recordsTotal = recordsTotal, data = data };
-			return Json(jsonData);
-		}
+        [HttpPost]
+        public async Task<JsonResult> excel()
+        {
+            try
+            {
 
-		public class InputModel
-		{
-			/// <summary>
-			///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-			///     directly from your code. This API may change or be removed in future releases.
-			/// </summary>
-			[Required]
-			public string id { get; set; }
+                ////Lấy 
+                var list = new List<UserModel>();
+                var role_avaliable = _configuration.GetSection("Roles").Get<string[]>().ToList();
+                foreach (var role in role_avaliable)
+                {
+                    var list_user = await UserManager.GetUsersInRoleAsync(role);
+                    list.AddRange(list_user);
+                }
 
-			/// <summary>
-			///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-			///     directly from your code. This API may change or be removed in future releases.
-			/// </summary>
-			[Required]
-			[StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
-			[DataType(DataType.Password)]
-			[Display(Name = "New password")]
-			public string? NewPassword { get; set; }
+                var data = new ArrayList();
 
-			/// <summary>
-			///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-			///     directly from your code. This API may change or be removed in future releases.
-			/// </summary>
-			[DataType(DataType.Password)]
-			[Display(Name = "Confirm new password")]
-			[Compare("NewPassword", ErrorMessage = "The new password and confirmation password do not match.")]
-			public string? ConfirmPassword { get; set; }
-		}
-		[HttpPost]
-		public async Task<IActionResult> ChangePassword(InputModel Input)
-		{
-			//Get User By Id
-			var User = await UserManager.FindByIdAsync(Input.id);
+                var viewPath = "wwwroot/report/excel/SOP1600XX.02 - Requisition list of user privileges – defining software access levels1.xlsx";
+                var documentPath = "/tmp/" + DateTime.Now.ToFileTimeUtc() + ".xlsx";
+                string Domain = (HttpContext.Request.IsHttps ? "https://" : "http://") + HttpContext.Request.Host.Value;
 
-			//Generate Token
-			var token = await UserManager.GeneratePasswordResetTokenAsync(User);
+                Workbook workbook = new Workbook();
+                workbook.LoadFromFile(viewPath);
+                list = list.Where(d => d.deleted_at == null).Distinct().ToList();
+                if (list.Count > 0)
+                {
+                    Worksheet sheet = workbook.Worksheets[0];
+                    int stt = 0;
+                    var start_r = 8;
 
-			//Set new Password
-			var changePasswordResult = await UserManager.ResetPasswordAsync(User, token, Input.NewPassword);
+                    DataTable dt = new DataTable();
+                    dt.Columns.Add("stt", typeof(int));
+                    dt.Columns.Add("ten", typeof(string));
+                    dt.Columns.Add("email", typeof(string));
+                    dt.Columns.Add("level", typeof(string));
+                    dt.Columns.Add("kho", typeof(string));
+                    dt.Columns.Add("note", typeof(string));
+                    sheet.InsertRow(9, list.Count());
+                    foreach (var item in list)
+                    {
+                        var groups = await UserManager.GetRolesAsync(item);
+                        var level = groups.ToList();
+                        DataRow dr1 = dt.NewRow();
+                        dr1["stt"] = (++stt);
+                        dr1["ten"] = item.FullName;
+                        dr1["email"] = item.Email;
+                        dr1["level"] = string.Join(",", level);
+                        dr1["note"] = "Đã tồn tại";
+                        dt.Rows.Add(dr1);
+                        start_r++;
 
-			if (!changePasswordResult.Succeeded)
-			{
-				var ErrorMessage = "";
-				foreach (var error in changePasswordResult.Errors)
-				{
-					ErrorMessage += error.Description + "<br>";
-				}
-				return Json(new { success = false, message = ErrorMessage });
-			}
-			User.expiry_date = DateTime.Now + TimeSpan.FromDays(180);
-			await UserManager.UpdateAsync(User);
+                        CellRange originDataRang = sheet.Range["A8:G8"];
+                        CellRange targetDataRang = sheet.Range["A" + start_r + ":G" + start_r];
+                        sheet.Copy(originDataRang, targetDataRang, true);
+                    }
+                    sheet.InsertDataTable(dt, false, 8, 1);
+                    sheet.DeleteRow(start_r);
+                }
 
-			/// Audittrail
-			System.Security.Claims.ClaimsPrincipal currentUser = this.User;
-			var user = await UserManager.GetUserAsync(currentUser); // Get user
-			var audit = new AuditTrailsModel();
-			audit.UserId = user.Id;
-			audit.Type = AuditType.Update.ToString();
-			audit.DateTime = DateTime.Now;
-			audit.description = $"Tài khoản {user.FullName} đã thay đổi mật khẩu tài khoản {User.FullName}.";
-			_context.Add(audit);
-			await _context.SaveChangesAsync();
+                workbook.SaveToFile("./wwwroot" + documentPath, ExcelVersion.Version2013);
+                //var congthuc_ct = _QLSXcontext.Congthuc_CTModel.Where()
+                var jsonData = new { success = true, link = documentPath };
+                return Json(jsonData);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+        public class SelectResponse
+        {
+            public string id { get; set; }
+            public string label { get; set; }
 
-			return Json(new { success = true, message = "Mật khẩu đã được thay đổi" });
-
-		}
-
-
-
-		public async Task<JsonResult> Roles()
-		{
-			var Model = RoleManager.Roles.Select(a => new
-			{
-				id = a.Name,
-				label = a.Name
-			}).ToList();
-			//var jsonData = new { data = ProcessModel };
-			return Json(Model);
-		}
-		public async Task<JsonResult> Departments()
-		{
-			var All = GetChild(0);
-			//var jsonData = new { data = ProcessModel };
-			return Json(All);
-		}
-		private List<SelectResponse> GetChild(int parent)
-		{
-			var DepartmentModel = _context.DepartmentModel.Where(d => d.deleted_at == null && d.parent == parent).OrderBy(d => d.stt).ToList();
-			var list = new List<SelectResponse>();
-			if (DepartmentModel.Count() > 0)
-			{
-				foreach (var department in DepartmentModel)
-				{
-					var DepartmentResponse = new SelectResponse
-					{
-
-						id = department.id.ToString(),
-						label = department.name
-					};
-					var count_child = _context.DepartmentModel.Where(d => d.deleted_at == null && d.parent == department.id).Count();
-					if (count_child > 0)
-					{
-						var child = GetChild(department.id);
-						DepartmentResponse.children = child;
-					}
-					list.Add(DepartmentResponse);
-				}
-			}
-			return list;
-		}
-
-		public class SelectResponse
-		{
-			public string id { get; set; }
-			public string label { get; set; }
-
-			public string name { get; set; }
-			public virtual List<SelectResponse> children { get; set; }
-		}
-	}
+            public string name { get; set; }
+            public virtual List<SelectResponse> children { get; set; }
+        }
+    }
 }

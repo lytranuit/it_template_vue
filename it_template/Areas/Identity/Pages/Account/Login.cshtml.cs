@@ -15,14 +15,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using Vue.Models;
-using Vue.Data;
 using System.Net.Http.Headers;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Vue.Data;
 using Vue.Services;
-using NuGet.Packaging.Signing;
 
 namespace it.Areas.Identity.Pages.Account
 {
@@ -34,9 +33,9 @@ namespace it.Areas.Identity.Pages.Account
 		private readonly LoginMailPyme _LoginMailPyme;
 
 		private readonly IConfiguration _configuration;
-		protected readonly AuthContext _context;
+		protected readonly ItContext _context;
 
-		public LoginModel(SignInManager<UserModel> signInManager, ILogger<LoginModel> logger, AuthContext context, UserManager<UserModel> UserMgr, IConfiguration configuration, LoginMailPyme LoginMailPyme)
+		public LoginModel(SignInManager<UserModel> signInManager, ILogger<LoginModel> logger, ItContext context, UserManager<UserModel> UserMgr, IConfiguration configuration, LoginMailPyme LoginMailPyme)
 		{
 			_signInManager = signInManager;
 			_logger = logger;
@@ -151,9 +150,9 @@ namespace it.Areas.Identity.Pages.Account
 					if (responseJson.authed == true)
 					{
 						user.last_login = DateTime.Now;
+						user.AccessFailedCount = 0;
 						_context.Update(user);
 						await _signInManager.SignInAsync(user, true);
-						//var roles = await UserManager.GetRolesAsync(user);
 						var authClaims = new List<Claim>
 						{
 							new Claim("Email", Input.Email),
@@ -210,6 +209,7 @@ namespace it.Areas.Identity.Pages.Account
 					_context.Add(TokenModel);
 					/// Audittrail
 					user.last_login = DateTime.Now;
+					user.AccessFailedCount = 0;
 					_context.Update(user);
 
 					var audit = new AuditTrailsModel();
@@ -261,6 +261,8 @@ namespace it.Areas.Identity.Pages.Account
 					ModelState.AddModelError(string.Empty, "Tài khoản hoặc mật khẩu không đúng.");
 					return Page();
 				}
+
+
 
 			}
 

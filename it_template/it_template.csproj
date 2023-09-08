@@ -43,6 +43,14 @@
 		<_WebToolingArtifacts Remove="Properties\PublishProfiles\web.pubxml" />
 	</ItemGroup>
 	<ItemGroup>
+		<None Include="Areas\Identity\Pages\Account\AccessDenied.cshtml" />
+		<None Include="Areas\Identity\Pages\Account\Login.cshtml" />
+		<None Include="Areas\Identity\Pages\Account\_StatusMessage.cshtml" />
+		<None Include="Areas\Identity\Pages\Account\_ViewImports.cshtml" />
+		<None Include="Areas\Identity\Pages\Error.cshtml" />
+		<None Include="Areas\Identity\Pages\_ValidationScriptsPartial.cshtml" />
+		<None Include="Areas\Identity\Pages\_ViewImports.cshtml" />
+		<None Include="Areas\Identity\Pages\_ViewStart.cshtml" />
 		<None Include="frontend\.vscode\extensions.json" />
 		<None Include="frontend\package-lock.json" />
 		<None Include="frontend\package.json" />
@@ -63,6 +71,9 @@
 		<None Include="wwwroot\images\process.svg" />
 		<None Include="wwwroot\images\task.svg" />
 		<None Include="wwwroot\images\user.webp" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Middleware\" />
 	</ItemGroup>
 	<Target Name="DebugEnsureNodeEnv" BeforeTargets="Build" Condition=" '$(Configuration)' == 'Debug' And !Exists('$(SpaRoot)node_modules') ">
 		<!-- Ensure Node.js is installed -->

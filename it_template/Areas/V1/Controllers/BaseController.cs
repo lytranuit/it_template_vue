@@ -9,9 +9,9 @@ namespace it_template.Areas.V1.Controllers
 	 [Authorize]
 	public class BaseController : Controller
 	{
-		protected readonly AuthContext _context;
+		protected readonly ItContext _context;
 
-		public BaseController(AuthContext context)
+		public BaseController(ItContext context)
 		{
 			_context = context;
 		}

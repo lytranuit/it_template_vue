@@ -1,42 +1,44 @@
-﻿using Vue.Models;
+﻿
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
-using Newtonsoft.Json;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Newtonsoft.Json;
+using Vue.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace Vue.Data
 {
-	public class AuthContext : DbContext
+	public class ItContext : DbContext
 	{
 		private IActionContextAccessor actionAccessor;
 		private UserManager<UserModel> UserManager;
-		public AuthContext(DbContextOptions<AuthContext> options, UserManager<UserModel> UserMgr, IActionContextAccessor ActionAccessor) : base(options)
+		public ItContext(DbContextOptions<ItContext> options, UserManager<UserModel> UserMgr, IActionContextAccessor ActionAccessor) : base(options)
 		{
 			actionAccessor = ActionAccessor;
 			UserManager = UserMgr;
-		}
 
+		}
+		
 		public DbSet<AuditTrailsModel> AuditTrailsModel { get; set; }
 
 		public DbSet<UserModel> UserModel { get; set; }
-		
+		public DbSet<UserRoleModel> UserRoleModel { get; set; }
+
 		//public DbSet<User2Model> User2Model { get; set; }
 		public DbSet<EmailModel> EmailModel { get; set; }
 		public DbSet<TokenModel> TokenModel { get; set; }
 		public DbSet<DepartmentModel> DepartmentModel { get; set; }
-
+		public DbSet<UserDepartmentModel> UserDepartmentModel { get; set; }
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
-			//modelBuilder.Entity<IdentityUser>().ToTable("AspNetUsers");
+			modelBuilder.Entity<UserRoleModel>().ToTable("AspNetUserRoles").HasKey(table => new
+			{
+				table.RoleId,
+				table.UserId
+			});
 
-			//modelBuilder.Entity<DocumentModel>().HasMany(l => l.Teams).WithOne().HasForeignKey("LeagueId");
-			//modelBuilder.Entity<ProcessTableDataModel>()
-			// .Property(b => b._data).HasColumnName("data");
-
-		}
-		protected override void ConfigureConventions(ModelConfigurationBuilder builder)
-		{
 		}
 		public override int SaveChanges()
 		{
@@ -101,5 +103,20 @@ namespace Vue.Data
 				AuditTrailsModel.Add(auditEntry.ToAudit());
 			}
 		}
+
+		protected override void ConfigureConventions(ModelConfigurationBuilder builder)
+		{
+		}
+	}
+	public class FilterIdRaw
+	{
+		[Key]
+		public int ItemId { get; set; }
+		public string Name { get; set; }
+	}
+	public class SizeRaw
+	{
+		[Key]
+		public long Size { get; set; }
 	}
 }

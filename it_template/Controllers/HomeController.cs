@@ -11,11 +11,11 @@ namespace Vue.Controllers
 
 	public class HomeController : Controller
 	{
-		protected readonly AuthContext _context;
+		protected readonly ItContext _context;
 		private readonly ViewRender _view;
 
 
-		public HomeController(AuthContext context, ViewRender view)
+		public HomeController(ItContext context, ViewRender view)
 		{
 			_context = context;
 			_view = view;
