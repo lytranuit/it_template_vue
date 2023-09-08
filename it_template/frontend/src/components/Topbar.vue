@@ -130,7 +130,6 @@ const toggle = (event) => {
       <i class="pi pi-ellipsis-v"></i>
     </button>
 
-    <PopupExecution></PopupExecution>
     <TieredMenu
       id="overlay_tmenu"
       ref="menu1"
